@@ -19,6 +19,67 @@ new_backtest/
 pip install -r requirements.txt
 ```
 
+## 데이터 구조
+
+### 데이터 파일 형식
+- **파일 형식**: Parquet
+- **위치**: `chart_day/` 폴더
+- **파일명 패턴**: `{COIN}_KRW.parquet` (예: `BTC_KRW.parquet`)
+
+### 데이터 스키마
+
+모든 데이터 파일은 다음과 같은 구조를 가집니다:
+
+| 컬럼명 | 데이터 타입 | 설명 |
+|--------|------------|------|
+| `timestamp` | datetime (index) | 날짜 (인덱스) |
+| `open` | float64 | 시가 (KRW) |
+| `high` | float64 | 고가 (KRW) |
+| `low` | float64 | 저가 (KRW) |
+| `close` | float64 | 종가 (KRW) |
+| `volume` | float64 | 거래량 (코인 수량) |
+
+### BTC 데이터 예시
+
+```python
+import pandas as pd
+
+df = pd.read_parquet('chart_day/BTC_KRW.parquet')
+print(df.head())
+```
+
+**출력 예시:**
+```
+                 open       high        low      close      volume
+timestamp
+2017-09-25  4201000.0  4333000.0  4175000.0  4322000.0  132.484755
+2017-09-26  4317000.0  4418000.0  4311000.0  4321000.0   22.788340
+2017-09-27  4322000.0  4677000.0  4318000.0  4657000.0   32.269662
+2017-09-28  4657000.0  4772000.0  4519000.0  4586000.0   80.588243
+2017-09-29  4586000.0  4709000.0  4476000.0  4657000.0   59.352373
+```
+
+### 데이터 특징
+- **기간**: 2017-09-25 ~ 현재 (약 2,969일 이상)
+- **결측치**: 없음
+- **화폐 단위**: KRW (대한민국 원)
+- **거래량 단위**: 코인 개수 (BTC, ETH 등)
+- **인덱스**: timestamp (datetime 형식)
+
+### 데이터 로드 방법
+
+```python
+import pandas as pd
+
+# 데이터 로드
+df = pd.read_parquet('chart_day/BTC_KRW.parquet')
+
+# 인덱스가 이미 timestamp로 설정되어 있음
+# 추가 설정 필요 없이 바로 사용 가능
+print(f"데이터 기간: {df.index.min()} ~ {df.index.max()}")
+print(f"총 데이터 수: {len(df)}일")
+```
+
 ## 백테스트 가이드라인
 
 ### 1. 기본 설정
@@ -249,12 +310,16 @@ os.makedirs('output', exist_ok=True)
 
 # 데이터 로드
 df = pd.read_parquet('chart_day/BTC_KRW.parquet')
-df['date'] = pd.to_datetime(df['date'])
-df.set_index('date', inplace=True)
+# timestamp가 이미 인덱스로 설정되어 있음
 
 # 초기 설정
 INITIAL_CAPITAL = 1  # 1원
 SLIPPAGE = 0.002     # 0.2%
+
+# 데이터 확인
+print(f"데이터 기간: {df.index.min()} ~ {df.index.max()}")
+print(f"총 {len(df)}일")
+print(f"컬럼: {list(df.columns)}")
 
 # SMA 계산
 df['sma30'] = df['close'].rolling(window=30).mean()
