@@ -192,66 +192,90 @@ print(f"총 데이터 수: {len(df)}일")
 
 ### 4. 시각화 요구사항
 
-모든 그래프는 `output/` 폴더에 PNG 형식으로 저장합니다.
+**중요**: 모든 그래프는 하나의 그림에 서브플롯으로 구성하여 `output/backtest_results.png` 파일로 저장합니다.
 
-#### 4.1 누적 자산 곡선
-- **파일명**: `output/cumulative_returns.png`
-- **Y축**: 로그 스케일 (log scale)
-- **초기값**: 1원
-- **포함 요소**:
-  - 전략 수익률 곡선
-  - 벤치마크 수익률 곡선
-  - Buy & Hold 수익률 (참고용)
+#### 4.1 전체 레이아웃 구성
+
+하나의 figure에 3개의 subplot을 다음과 같이 배치합니다:
+- **subplot 1**: 누적 자산 곡선 (상단)
+- **subplot 2**: Drawdown 차트 (중단)
+- **subplot 3**: 월별 수익률 히트맵 (하단)
+
+#### 4.2 구현 예시
 
 ```python
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 
-fig, ax = plt.subplots(figsize=(12, 6))
-ax.plot(df.index, df['strategy_equity'], label='Strategy')
-ax.plot(df.index, df['benchmark_equity'], label='Benchmark (SMA30)')
-ax.set_yscale('log')
-ax.set_ylabel('Cumulative Returns (KRW, log scale)')
-ax.set_xlabel('Date')
-ax.legend()
-ax.grid(True, alpha=0.3)
-plt.savefig('output/cumulative_returns.png', dpi=300, bbox_inches='tight')
-```
+# Figure 생성: 3개의 subplot (세로 배치)
+fig = plt.figure(figsize=(14, 12))
+gs = fig.add_gridspec(3, 1, height_ratios=[2, 1, 2], hspace=0.3)
 
-#### 4.2 Drawdown 차트
-- **파일명**: `output/drawdown.png`
-- **Y축**: 퍼센트 (%)
-- **형식**: Area chart (영역 그래프)
-- **색상**: 빨간색 계열 권장
+# Subplot 1: 누적 자산 곡선 (로그 스케일)
+ax1 = fig.add_subplot(gs[0])
+ax1.plot(df.index, df['strategy_equity'], label='Strategy', linewidth=2)
+ax1.plot(df.index, df['benchmark_equity'], label='Benchmark (SMA30)', linewidth=2, alpha=0.7)
+ax1.set_yscale('log')
+ax1.set_ylabel('Cumulative Returns (KRW, log scale)', fontsize=11)
+ax1.set_title('Backtest Performance Analysis', fontsize=14, fontweight='bold')
+ax1.legend(loc='upper left')
+ax1.grid(True, alpha=0.3)
 
-```python
-fig, ax = plt.subplots(figsize=(12, 4))
-ax.fill_between(df.index, 0, df['drawdown_pct'], color='red', alpha=0.3)
-ax.plot(df.index, df['drawdown_pct'], color='red', linewidth=1)
-ax.set_ylabel('Drawdown (%)')
-ax.set_xlabel('Date')
-ax.grid(True, alpha=0.3)
-plt.savefig('output/drawdown.png', dpi=300, bbox_inches='tight')
-```
+# Subplot 2: Drawdown 차트 (%)
+ax2 = fig.add_subplot(gs[1])
+ax2.fill_between(df.index, 0, df['drawdown_pct'], color='red', alpha=0.3)
+ax2.plot(df.index, df['drawdown_pct'], color='red', linewidth=1)
+ax2.set_ylabel('Drawdown (%)', fontsize=11)
+ax2.set_xlabel('Date', fontsize=11)
+ax2.grid(True, alpha=0.3)
+ax2.axhline(y=0, color='black', linewidth=0.5)
 
-#### 4.3 월별 수익률 히트맵
-- **파일명**: `output/monthly_returns_heatmap.png`
-- **형식**: 히트맵 (Seaborn)
-- **행**: 연도, **열**: 월
-
-```python
-import seaborn as sns
+# Subplot 3: 월별 수익률 히트맵
+ax3 = fig.add_subplot(gs[2])
 
 # 월별 수익률을 피벗 테이블로 변환
-monthly_rets = df['returns'].resample('M').sum() * 100  # 퍼센트로 변환
+monthly_rets = df['strategy_returns'].resample('M').apply(lambda x: (1 + x).prod() - 1) * 100
 pivot_table = monthly_rets.groupby([monthly_rets.index.year, monthly_rets.index.month]).sum().unstack()
+pivot_table.columns = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.heatmap(pivot_table, annot=True, fmt='.2f', cmap='RdYlGn', center=0, ax=ax)
-ax.set_ylabel('Year')
-ax.set_xlabel('Month')
-plt.savefig('output/monthly_returns_heatmap.png', dpi=300, bbox_inches='tight')
+sns.heatmap(pivot_table, annot=True, fmt='.1f', cmap='RdYlGn', center=0,
+            ax=ax3, cbar_kws={'label': 'Monthly Return (%)'})
+ax3.set_ylabel('Year', fontsize=11)
+ax3.set_xlabel('Month', fontsize=11)
+ax3.set_title('Monthly Returns (%)', fontsize=12)
+
+# 저장
+plt.savefig('output/backtest_results.png', dpi=300, bbox_inches='tight')
+plt.close()
+
+print("시각화 완료: output/backtest_results.png")
 ```
+
+#### 4.3 각 subplot 세부 요구사항
+
+**Subplot 1: 누적 자산 곡선**
+- Y축: 로그 스케일 (log scale)
+- 초기값: 1원
+- 포함 요소:
+  - 전략 수익률 곡선
+  - 벤치마크 수익률 곡선 (전일종가 > SMA30)
+  - Buy & Hold 수익률 (선택사항)
+
+**Subplot 2: Drawdown 차트**
+- Y축: 퍼센트 (%)
+- 형식: Area chart (영역 그래프)
+- 색상: 빨간색 계열
+- 0% 기준선 표시
+
+**Subplot 3: 월별 수익률 히트맵**
+- 형식: 히트맵 (Seaborn)
+- 행: 연도 (Year)
+- 열: 월 (Month, Jan-Dec)
+- 컬러맵: RdYlGn (빨강-노랑-초록)
+- 중심값: 0%
+- 각 셀에 수치 표시
 
 ### 5. 결과 저장
 
@@ -273,9 +297,10 @@ os.makedirs('output', exist_ok=True)
    - `output/trade_log.csv`: 거래 내역 (선택사항)
 
 2. **PNG 파일**
-   - `output/cumulative_returns.png`: 누적 수익률 (로그 스케일)
-   - `output/drawdown.png`: Drawdown 차트
-   - `output/monthly_returns_heatmap.png`: 월별 수익률 히트맵
+   - `output/backtest_results.png`: 백테스트 결과 종합 시각화
+     - Subplot 1: 누적 수익률 (로그 스케일)
+     - Subplot 2: Drawdown 차트
+     - Subplot 3: 월별 수익률 히트맵
 
 ### 6. 백테스트 체크리스트
 
@@ -290,9 +315,10 @@ os.makedirs('output', exist_ok=True)
 - [ ] Total Return 계산 (배수 x로 표기)
 - [ ] CAGR 계산 구현
 - [ ] MDD 계산 구현
-- [ ] 누적 자산 그래프 (log scale) 생성
-- [ ] Drawdown 그래프 (%) 생성
-- [ ] 월별 수익률 히트맵 생성
+- [ ] 하나의 그림에 3개 subplot으로 시각화 생성
+  - [ ] Subplot 1: 누적 자산 그래프 (log scale)
+  - [ ] Subplot 2: Drawdown 그래프 (%)
+  - [ ] Subplot 3: 월별 수익률 히트맵
 - [ ] 벤치마크 (전일종가 > SMA30) 비교
 
 ### 7. 코드 템플릿 예시
@@ -342,16 +368,21 @@ df['benchmark_signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(in
 # CAGR, MDD, 월별 수익률 등
 
 # === 시각화 ===
-# 누적 수익률, Drawdown, 월별 수익률 히트맵
+# 하나의 그림에 3개 subplot 생성 (섹션 4 참조)
+# - Subplot 1: 누적 수익률 (로그 스케일)
+# - Subplot 2: Drawdown (%)
+# - Subplot 3: 월별 수익률 히트맵
+# output/backtest_results.png 저장
 
 # === 결과 저장 ===
-# CSV 및 PNG 파일 저장
+# CSV 파일 저장: performance_summary.csv, monthly_returns.csv
 
 print("백테스트 완료!")
 print(f"Total Return: {total_return:.2f}x")
 print(f"CAGR: {cagr:.2%}")
 print(f"MDD: {mdd:.2%}")
 print(f"최종 자산: {final_equity:,.0f}원")
+print(f"결과 저장 완료: output/backtest_results.png")
 ```
 
 ## 참고사항
