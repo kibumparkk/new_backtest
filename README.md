@@ -90,17 +90,25 @@ pip install -r requirements.txt
 
 #### 3.1 수익률 지표
 
-1. **CAGR (연평균 복리수익률)**
+1. **Total Return (총 수익률)**
+   - **표기 방식**: 배수 (x)로 표기
+   - **계산 공식**:
+   ```python
+   total_return = final_equity / initial_capital
+   # 예시: 1원 → 10원이면 10.0x
+   # 예시: 1원 → 2.5원이면 2.5x
+   ```
+   - 초기 자본: 1원
+   - 복리 계산으로 누적
+   - **중요**: 퍼센트(%)가 아닌 배수로 표기
+
+2. **CAGR (연평균 복리수익률)**
    ```python
    # 계산 공식
    total_days = (end_date - start_date).days
    years = total_days / 365.25
    CAGR = (final_value / initial_value) ** (1 / years) - 1
    ```
-
-2. **누적 수익률**
-   - 초기 자본: 1원
-   - 복리 계산으로 누적
 
 3. **월별 수익률**
    - 각 월의 수익률 계산
@@ -196,6 +204,10 @@ os.makedirs('output', exist_ok=True)
 
 1. **CSV 파일**
    - `output/performance_summary.csv`: 전체 성과 요약
+     - Total Return (배수 x로 표기)
+     - CAGR (%)
+     - MDD (%)
+     - 기타 성과 지표
    - `output/monthly_returns.csv`: 월별 수익률
    - `output/trade_log.csv`: 거래 내역 (선택사항)
 
@@ -214,6 +226,7 @@ os.makedirs('output', exist_ok=True)
 - [ ] 두 방식의 결과 차이 < 0.01% 확인
 - [ ] 슬리피지 0.2% 적용 확인
 - [ ] Look-ahead bias 방지 확인 (shift 사용)
+- [ ] Total Return 계산 (배수 x로 표기)
 - [ ] CAGR 계산 구현
 - [ ] MDD 계산 구현
 - [ ] 누적 자산 그래프 (log scale) 생성
@@ -259,6 +272,8 @@ df['benchmark_signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(in
 # assert abs(final_return_vectorized - final_return_loop) < 0.0001
 
 # === 성과 지표 계산 ===
+# Total Return (배수)
+# total_return = final_equity / INITIAL_CAPITAL
 # CAGR, MDD, 월별 수익률 등
 
 # === 시각화 ===
@@ -268,6 +283,7 @@ df['benchmark_signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(in
 # CSV 및 PNG 파일 저장
 
 print("백테스트 완료!")
+print(f"Total Return: {total_return:.2f}x")
 print(f"CAGR: {cagr:.2%}")
 print(f"MDD: {mdd:.2%}")
 print(f"최종 자산: {final_equity:,.0f}원")
