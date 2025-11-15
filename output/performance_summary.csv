@@ -1,0 +1,4 @@
+﻿Strategy,Total Return,CAGR,MDD,Sharpe Ratio,Win Rate,Total Trades,Trades/Year,Final Equity
+ML Strategy (Random Forest),7.71x,29.26%,-74.04%,0.68,52.70%,1368,171.9,8
+Benchmark (SMA30),367.97x,110.02%,-39.23%,1.50,54.42%,1549,194.6,368
+Buy & Hold,17.12x,42.86%,-86.81%,0.74,51.65%,2904,364.7,17
