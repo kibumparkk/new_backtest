@@ -47,9 +47,9 @@ print("\n전략 지표 계산 중...")
 df['momentum'] = df['close'] - df['close'].shift(20)
 df['strategy_signal'] = (df['momentum'] > 0).astype(int)
 
-# 벤치마크: SMA30 Cross
+# 벤치마크: SMA30 Cross (shift(1)은 수익률 계산에서 적용)
 df['sma30'] = df['close'].rolling(window=30).mean()
-df['benchmark_signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(int)
+df['benchmark_signal'] = (df['close'] > df['sma30']).astype(int)
 
 # 일일 수익률
 df['daily_return'] = df['close'].pct_change()

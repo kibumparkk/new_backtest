@@ -88,8 +88,8 @@ def calculate_rsi(series, period=14):
 
 df['rsi14'] = calculate_rsi(df['close'], 14)
 
-# 벤치마크 전략: 전일종가 > SMA30
-df['benchmark_signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(int)
+# 벤치마크 전략: 종가 > SMA30 (shift(1)은 백테스트 함수에서 적용)
+df['benchmark_signal'] = (df['close'] > df['sma30']).astype(int)
 
 def backtest_strategy(signals, name):
     """백테스트 실행 함수"""

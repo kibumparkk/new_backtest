@@ -1,0 +1,2 @@
+Strategy,Total_Return_x,CAGR_%,MDD_%,Sharpe_Ratio,Avg_Position_Size,Max_Position_Size,Benchmark_Return_x,Outperformance_%,Buy_Hold_Return_x
+ATR_Leveraged_SMA30,13711.239302815311,226.69563914036863,-73.83251989422885,1.7550368979304443,2.0,2.0,252.02972995313297,5340.326149365406,36.141832484960524
