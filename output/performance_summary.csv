@@ -1,0 +1,3 @@
+﻿Strategy,Parameters,Total Return (x),CAGR (%),MDD (%),Sharpe Ratio,Total Trades
+Dual MA (Buy/Sell Split),"Buy: SMA29, Sell: SMA31",286.23x,100.60%,-37.37%,1.78,182
+Single MA (Optimized),SMA31,269.34x,99.10%,-44.84%,1.77,176
