@@ -89,8 +89,44 @@ print(f"총 데이터 수: {len(df)}일")
 - 특별한 언급이 있는 경우에만 다른 코인 추가
 
 #### 1.2 벤치마크 전략
-- **전략**: 전일종가 > SMA30 (30일 단순이동평균)
-- 조건 충족 시 매수, 미충족 시 매도/관망
+
+**전략 로직**: 전일종가 > SMA30 (30일 단순이동평균)
+
+**매매 규칙**:
+- 전일 종가가 전일 SMA30보다 높으면 → 당일 매수 포지션
+- 전일 종가가 전일 SMA30 이하이면 → 당일 현금 보유
+
+**shift(1) 적용 방법**:
+
+```python
+# SMA 계산
+df['sma30'] = df['close'].rolling(window=30).mean()
+
+# 시그널 생성: 전일 데이터로 당일 포지션 결정
+df['signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(int)
+
+# 수익률 계산
+df['returns'] = df['close'].pct_change()
+
+# 전략 수익률: 당일 시그널로 당일 수익률 적용
+df['strategy_returns'] = df['signal'] * df['returns']
+```
+
+**타임라인 예시**:
+
+| 날짜 | 종가 | SMA30 | 비교 (전일) | 당일 포지션 | 당일 수익률 |
+|------|------|-------|-------------|-------------|-------------|
+| 1/1  | 100  | 90    | -           | -           | -           |
+| 1/2  | 105  | 92    | 100 > 90 ✓  | 매수 (1)    | +5%         |
+| 1/3  | 103  | 94    | 105 > 92 ✓  | 매수 (1)    | -1.9%       |
+| 1/4  | 95   | 96    | 103 > 94 ✓  | 매수 (1)    | -7.8%       |
+| 1/5  | 98   | 97    | 95 < 96 ✗   | 현금 (0)    | 0%          |
+
+**핵심 원칙**:
+- **t-1일 종가**와 **t-1일 SMA30**을 비교하여 → **t일 포지션** 결정
+- `shift(1)`은 "전일 데이터를 현재 행에서 참조"한다는 의미
+- 당일 종가는 당일 장 마감 후에만 알 수 있으므로, 전일 데이터로 당일 매매 결정
+- Look-Ahead Bias 방지를 위해 필수적
 
 #### 1.3 거래 비용
 - **슬리피지**: 0.2% (매수/매도 시 각각 적용)
@@ -274,6 +310,10 @@ os.makedirs('output', exist_ok=True)
 - [ ] BTC_KRW.parquet 데이터 존재 확인
 - [ ] output/ 폴더 생성
 - [ ] 슬리피지 0.2% 적용 확인
+- [ ] 벤치마크 전략 구현
+  - [ ] shift(1) 올바르게 적용 (전일 데이터로 당일 포지션 결정)
+  - [ ] 시그널 생성: `df['close'].shift(1) > df['sma30'].shift(1)`
+  - [ ] 수익률 계산: `df['signal'] * df['returns']`
 - [ ] Total Return 계산 (배수 x로 표기)
 - [ ] CAGR 계산 구현
 - [ ] MDD 계산 구현
@@ -281,7 +321,6 @@ os.makedirs('output', exist_ok=True)
   - [ ] Subplot 1: 누적 자산 그래프 (log scale) + 성과지표 텍스트
   - [ ] Subplot 2: Drawdown 그래프 (%)
   - [ ] Subplot 3: 월별 수익률 히트맵
-- [ ] 벤치마크 (전일종가 > SMA30) 비교
 - [ ] 결과 저장: CSV 및 PNG 파일
 
 ### 6. 코드 템플릿 예시
@@ -310,15 +349,30 @@ print(f"데이터 기간: {df.index.min()} ~ {df.index.max()}")
 print(f"총 {len(df)}일")
 print(f"컬럼: {list(df.columns)}")
 
+# === 벤치마크 전략 구현 ===
 # SMA 계산
 df['sma30'] = df['close'].rolling(window=30).mean()
 
-# 벤치마크 전략: 전일종가 > SMA30
+# 시그널 생성: 전일 데이터로 당일 포지션 결정
 df['benchmark_signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(int)
+
+# 수익률 계산
+df['returns'] = df['close'].pct_change()
+
+# 벤치마크 전략 수익률
+df['benchmark_returns'] = df['benchmark_signal'] * df['returns']
+
+# 벤치마크 자산 곡선 계산 (초기자본 1원, 슬리피지 미적용 - 참고용)
+df['benchmark_equity'] = INITIAL_CAPITAL * (1 + df['benchmark_returns']).cumprod()
 
 # === 백테스트 로직 구현 ===
 # (여기에 자유롭게 백테스트 로직 구현)
-# 예: 전략 시그널 생성, 수익률 계산, 자산 곡선 계산 등
+# 예: 전략 시그널 생성, 슬리피지 적용, 자산 곡선 계산 등
+#
+# 전략 구현 예시:
+# df['strategy_signal'] = ...  # 본인의 전략 시그널
+# df['strategy_returns'] = df['strategy_signal'] * df['returns']
+# df['strategy_equity'] = INITIAL_CAPITAL * (1 + df['strategy_returns']).cumprod()
 
 # === 성과 지표 계산 ===
 # Total Return (배수)
