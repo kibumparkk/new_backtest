@@ -41,8 +41,9 @@ df['sma30'] = df['close'].rolling(window=SMA_WINDOW).mean()
 df = df.dropna()
 print(f"  유효 데이터: {len(df)}일 (SMA 계산 후)")
 
-# 벤치마크 신호: 전일종가 > SMA30 (전일 데이터 사용)
-# Look-ahead bias 방지: shift(1) 사용
+# 신호: 전일종가 > 전일SMA30
+# 전일(t-1)의 종가가 전일(t-1)의 SMA30보다 높으면 오늘(t) 매수
+# shift(1)을 여기서만 사용 (position에서는 shift 불필요)
 df['signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(int)
 
 print("\n[3] 백테스트 실행...")
@@ -55,8 +56,9 @@ print("  방법 1: 벡터화 연산 (Pandas/NumPy)")
 # 일간 수익률 계산
 df['daily_return'] = df['close'].pct_change()
 
-# 포지션 계산 (전일 신호 사용 - Look-ahead bias 방지)
-df['position'] = df['signal'].shift(1).fillna(0)
+# 포지션 = 신호 (shift는 이미 signal 계산 시 적용됨)
+# signal[t]는 이미 t-1일 데이터로 계산되었으므로, t일에 바로 사용 가능
+df['position'] = df['signal'].fillna(0)
 
 # 포지션 변화 계산 (매수/매도 시점 파악)
 df['position_change'] = df['position'].diff()
@@ -111,11 +113,8 @@ for i in range(len(df)):
         position_list.append(0)
         continue
 
-    # 전일 신호 기반으로 오늘의 포지션 결정
-    if i == 1:
-        target_position = 0  # 첫날은 신호 없음
-    else:
-        target_position = df['signal'].iloc[i-1]
+    # 오늘의 신호 (이미 전일 데이터로 계산됨)
+    target_position = df['signal'].iloc[i]
 
     # 오늘 가격 변화
     price_return = df['daily_return'].iloc[i]
