@@ -96,60 +96,9 @@ print(f"총 데이터 수: {len(df)}일")
 - **슬리피지**: 0.2% (매수/매도 시 각각 적용)
 - 실제 체결가격 = 이론가격 × (1 ± 0.002)
 
-### 2. 구현 요구사항
+### 2. 필수 산출 지표
 
-#### 2.1 이중 검증 (Cross-Check)
-모든 백테스트 로직은 **두 가지 방식으로 구현**하여 결과를 비교 검증해야 합니다:
-
-1. **벡터화 연산** (Pandas/NumPy)
-   ```python
-   # 예시: 벡터화 구현
-   df['signal'] = (df['close'].shift(1) > df['sma30']).astype(int)
-   df['returns'] = df['close'].pct_change()
-   df['strategy_returns'] = df['signal'].shift(1) * df['returns']
-   ```
-
-2. **반복문 구현**
-   ```python
-   # 예시: 반복문 구현
-   for i in range(1, len(df)):
-       if df.loc[i-1, 'close'] > df.loc[i-1, 'sma30']:
-           signal[i] = 1
-       # ... 계산 로직
-   ```
-
-3. **검증**
-   - 두 방법의 최종 수익률 차이가 0.01% 이내여야 함
-   - 차이가 있을 경우 로직 오류로 판단하고 수정
-
-#### 2.2 성과 과대평가 방지
-
-다음 사항들을 반드시 고려하여 구현해야 합니다:
-
-1. **Look-Ahead Bias 방지**
-   - 당일 데이터로 당일 거래 금지
-   - 신호 생성 시 `.shift(1)` 사용 필수
-   - 예: t일 종가로 t+1일 거래
-
-2. **Survivorship Bias 인지**
-   - 현재 상장된 코인만 포함된 데이터 사용 시 유의
-   - 상장폐지된 코인 미포함으로 인한 편향 인지
-
-3. **Data Snooping 방지**
-   - 전체 기간 데이터로 파라미터 최적화 지양
-   - 가능하면 In-Sample / Out-of-Sample 분리
-
-4. **거래비용 현실화**
-   - 슬리피지 0.2% 필수 반영
-   - 거래소 수수료 고려 (필요시)
-
-5. **유동성 제약**
-   - 대량 거래 시 시장 충격 고려
-   - 소형 코인의 경우 추가 슬리피지 검토
-
-### 3. 필수 산출 지표
-
-#### 3.1 수익률 지표
+#### 2.1 수익률 지표
 
 1. **Total Return (총 수익률)**
    - **표기 방식**: 배수 (x)로 표기
@@ -175,7 +124,7 @@ print(f"총 데이터 수: {len(df)}일")
    - 각 월의 수익률 계산
    - CSV 파일로 저장: `output/monthly_returns.csv`
 
-#### 3.2 리스크 지표
+#### 2.2 리스크 지표
 
 1. **MDD (Maximum Drawdown)**
    ```python
@@ -190,18 +139,18 @@ print(f"총 데이터 수: {len(df)}일")
 3. **Sortino Ratio** (선택사항)
 4. **Win Rate** (선택사항)
 
-### 4. 시각화 요구사항
+### 3. 시각화 요구사항
 
 **중요**: 모든 그래프는 하나의 그림에 서브플롯으로 구성하여 `output/backtest_results.png` 파일로 저장합니다.
 
-#### 4.1 전체 레이아웃 구성
+#### 3.1 전체 레이아웃 구성
 
 하나의 figure에 3개의 subplot을 다음과 같이 배치합니다:
-- **subplot 1**: 누적 자산 곡선 (상단)
+- **subplot 1**: 누적 자산 곡선 (상단) + **주요 성과지표 텍스트**
 - **subplot 2**: Drawdown 차트 (중단)
 - **subplot 3**: 월별 수익률 히트맵 (하단)
 
-#### 4.2 구현 예시
+#### 3.2 구현 예시
 
 ```python
 import matplotlib.pyplot as plt
@@ -221,6 +170,16 @@ ax1.set_ylabel('Cumulative Returns (KRW, log scale)', fontsize=11)
 ax1.set_title('Backtest Performance Analysis', fontsize=14, fontweight='bold')
 ax1.legend(loc='upper left')
 ax1.grid(True, alpha=0.3)
+
+# 주요 성과지표 텍스트 박스 추가 (우측 상단, legend와 겹치지 않게)
+metrics_text = f'''Total Return: {total_return:.2f}x
+CAGR: {cagr:.2%}
+MDD: {mdd:.2%}
+Sharpe: {sharpe_ratio:.2f}'''
+
+ax1.text(0.98, 0.97, metrics_text, transform=ax1.transAxes,
+         fontsize=10, verticalalignment='top', horizontalalignment='right',
+         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
 
 # Subplot 2: Drawdown 차트 (%)
 ax2 = fig.add_subplot(gs[1])
@@ -253,15 +212,21 @@ plt.close()
 print("시각화 완료: output/backtest_results.png")
 ```
 
-#### 4.3 각 subplot 세부 요구사항
+#### 3.3 각 subplot 세부 요구사항
 
-**Subplot 1: 누적 자산 곡선**
+**Subplot 1: 누적 자산 곡선 + 성과지표**
 - Y축: 로그 스케일 (log scale)
 - 초기값: 1원
 - 포함 요소:
   - 전략 수익률 곡선
   - 벤치마크 수익률 곡선 (전일종가 > SMA30)
   - Buy & Hold 수익률 (선택사항)
+- **성과지표 텍스트 박스** (우측 상단):
+  - Total Return (배수)
+  - CAGR (%)
+  - MDD (%)
+  - Sharpe Ratio (선택사항)
+  - legend와 겹치지 않도록 배치
 
 **Subplot 2: Drawdown 차트**
 - Y축: 퍼센트 (%)
@@ -277,15 +242,15 @@ print("시각화 완료: output/backtest_results.png")
 - 중심값: 0%
 - 각 셀에 수치 표시
 
-### 5. 결과 저장
+### 4. 결과 저장
 
-#### 5.1 폴더 생성
+#### 4.1 폴더 생성
 ```python
 import os
 os.makedirs('output', exist_ok=True)
 ```
 
-#### 5.2 저장 파일 목록
+#### 4.2 저장 파일 목록
 
 1. **CSV 파일**
    - `output/performance_summary.csv`: 전체 성과 요약
@@ -298,30 +263,28 @@ os.makedirs('output', exist_ok=True)
 
 2. **PNG 파일**
    - `output/backtest_results.png`: 백테스트 결과 종합 시각화
-     - Subplot 1: 누적 수익률 (로그 스케일)
+     - Subplot 1: 누적 수익률 (로그 스케일) + 성과지표 텍스트
      - Subplot 2: Drawdown 차트
      - Subplot 3: 월별 수익률 히트맵
 
-### 6. 백테스트 체크리스트
+### 5. 백테스트 체크리스트
 
 백테스트 실행 전 다음 사항을 확인하세요:
 
 - [ ] BTC_KRW.parquet 데이터 존재 확인
 - [ ] output/ 폴더 생성
-- [ ] 벡터화 + 반복문 두 가지 방식 구현
-- [ ] 두 방식의 결과 차이 < 0.01% 확인
 - [ ] 슬리피지 0.2% 적용 확인
-- [ ] Look-ahead bias 방지 확인 (shift 사용)
 - [ ] Total Return 계산 (배수 x로 표기)
 - [ ] CAGR 계산 구현
 - [ ] MDD 계산 구현
 - [ ] 하나의 그림에 3개 subplot으로 시각화 생성
-  - [ ] Subplot 1: 누적 자산 그래프 (log scale)
+  - [ ] Subplot 1: 누적 자산 그래프 (log scale) + 성과지표 텍스트
   - [ ] Subplot 2: Drawdown 그래프 (%)
   - [ ] Subplot 3: 월별 수익률 히트맵
 - [ ] 벤치마크 (전일종가 > SMA30) 비교
+- [ ] 결과 저장: CSV 및 PNG 파일
 
-### 7. 코드 템플릿 예시
+### 6. 코드 템플릿 예시
 
 ```python
 import pandas as pd
@@ -353,23 +316,18 @@ df['sma30'] = df['close'].rolling(window=30).mean()
 # 벤치마크 전략: 전일종가 > SMA30
 df['benchmark_signal'] = (df['close'].shift(1) > df['sma30'].shift(1)).astype(int)
 
-# === 방법 1: 벡터화 구현 ===
-# (여기에 벡터화 로직 구현)
-
-# === 방법 2: 반복문 구현 ===
-# (여기에 반복문 로직 구현)
-
-# === 결과 비교 ===
-# assert abs(final_return_vectorized - final_return_loop) < 0.0001
+# === 백테스트 로직 구현 ===
+# (여기에 자유롭게 백테스트 로직 구현)
+# 예: 전략 시그널 생성, 수익률 계산, 자산 곡선 계산 등
 
 # === 성과 지표 계산 ===
 # Total Return (배수)
 # total_return = final_equity / INITIAL_CAPITAL
-# CAGR, MDD, 월별 수익률 등
+# CAGR, MDD, 월별 수익률, Sharpe Ratio 등 계산
 
 # === 시각화 ===
-# 하나의 그림에 3개 subplot 생성 (섹션 4 참조)
-# - Subplot 1: 누적 수익률 (로그 스케일)
+# 하나의 그림에 3개 subplot 생성 (섹션 3 참조)
+# - Subplot 1: 누적 수익률 (로그 스케일) + 성과지표 텍스트 박스
 # - Subplot 2: Drawdown (%)
 # - Subplot 3: 월별 수익률 히트맵
 # output/backtest_results.png 저장
