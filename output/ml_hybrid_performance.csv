@@ -1,0 +1,11 @@
+﻿Strategy,Total Return,CAGR,MDD,Sharpe Ratio,Win Rate,Total Trades
+Benchmark (SMA30),367.97x,113.33%,-34.44%,1.49,54.29%,1503
+Hybrid 3 (Prob>0.65 OR SMA30),90.74x,78.31%,-57.11%,1.25,53.67%,1800
+Buy & Hold,35.98x,58.33%,-74.13%,0.68,51.46%,2849
+Hybrid 6 (Dynamic Threshold),14.19x,40.54%,-76.39%,0.90,53.90%,1219
+Hybrid 1 (Prob>0.55 & SMA30),8.40x,31.39%,-23.09%,1.07,57.28%,515
+Hybrid 5 (ML Prob>0.5),8.37x,31.34%,-78.19%,0.76,53.69%,1164
+Hybrid 7 (ML + Multi-SMA Trend),5.53x,24.52%,-32.53%,0.96,58.42%,380
+Hybrid 4 (Prob>0.52 & (SMA30 OR RSI<70)),5.16x,23.44%,-78.00%,0.63,53.69%,1084
+Hybrid 2 (Prob>0.6 & SMA30),4.83x,22.37%,-20.48%,0.88,55.84%,428
+Hybrid 8 (Conservative),1.07x,0.85%,-21.54%,0.12,44.09%,93
